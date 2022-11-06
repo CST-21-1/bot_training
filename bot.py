@@ -45,12 +45,12 @@ def get_deadline(message):
     bot.register_next_step_handler(message, send_welcome)
 
 
-@bot.callback_query_handler(func=lambda call: True)
-def answer(call):
-    if call.data == 'create_task':
-        pass
-    elif call.data == 'view_tasks':
-        pass
+# @bot.callback_query_handler(func=lambda call: True)
+# def answer(call):
+#     if call.data == 'create_task':
+#         pass
+#     elif call.data == 'view_tasks':
+#         pass
 
 
 bot.polling(none_stop=True, interval=0)
