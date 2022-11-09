@@ -1,15 +1,19 @@
 from telebot import *
-from telebot.ext import *
-from requests import *
+import taskBotDB
 
 bot = telebot.TeleBot('5741260025:AAEUYgaP6f1ULfHe9gbsViVZ_XEJn0DjhGA')
 
+botDB = taskBotDB.BotDB()
+
+botDB.initialize()
+botDB.show_all_users()
 
 
 @bot.message_handler(commands=['start', 'help'])
 def start(message):
 	bot.reply_to(message, "Welcome, this is tasklist bot!")
 	show_main_options(message)
+
 
 def show_main_options(message):
 	markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -34,5 +38,7 @@ def process_main_options(message):
 	else:
 		mess = bot.send_message(message.chat.id, "Unknown functions, please, choose only stated options!")
 		show_main_options(message)
+
+
 
 bot.infinity_polling()
