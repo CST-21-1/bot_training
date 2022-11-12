@@ -32,11 +32,6 @@ def show_main_menu(message):
     bot.send_message(message.chat.id, 'Choose an option:', reply_markup=markup)
 
 
-@bot.message_handler(func=lambda message: message.text == 'Show tasks')
-def show_tasks(message):
-    bot.send_message(message.chat.id, 'Your tasks:')
-
-
 @bot.message_handler(func=lambda message: message.text == 'Add a task')
 def add_task(message):
     markup = types.ReplyKeyboardRemove(selective=False)
@@ -57,14 +52,25 @@ def set_name(message):
 def set_description(message, current_task_id):
     s.query(Task).filter(Task.id == current_task_id).update({'description': message.text})
     s.commit()
-    bot.send_message(message.chat.id, 'Enter the deadline like this: 2022-09-11 15:33')
+    bot.send_message(message.chat.id, 'Enter the deadline in YY-MM-DD HH:MM format or type any letter to create a '
+                                      'task without a deadline')
     bot.register_next_step_handler(message, set_deadline, current_task_id)
 
 
 def set_deadline(message, current_task_id):
-    s.query(Task).filter(Task.id == current_task_id).update({'deadline': message.text})
-    s.commit()
-    show_main_menu(message)
+    try:
+        s.query(Task).filter(Task.id == current_task_id).update({'deadline': message.text})
+        s.commit()
+    except:
+        bot.reply_to(message, 'You entered the date/time incorrectly or you wanted it to be empty, so the task was '
+                              'created without it.')
+    finally:
+        show_main_menu(message)
+
+
+@bot.message_handler(func=lambda message: message.text == 'Show tasks')
+def show_tasks(message):
+    bot.send_message(message.chat.id, 'Your tasks:')
 
 
 bot.polling()
