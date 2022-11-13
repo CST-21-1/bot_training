@@ -21,7 +21,7 @@ def send_welcome(message):
 
 def get_current_user_id(message):
     current_user = s.query(User).filter(User.telegram_id == message.from_user.id).first()
-    return current_user.id
+    return current_user.telegram_id
 
 
 def show_main_menu(message):
