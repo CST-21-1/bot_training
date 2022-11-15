@@ -1,7 +1,9 @@
+import sqlalchemy
 import telebot
 from telebot import types
 
 from tgbot import config
+from create_table import db, connection
 
 bot = telebot.TeleBot(config.TOKEN)
 
