@@ -1,23 +1,30 @@
-import sqlalchemy as db
-from sqlalchemy.orm import sessionmaker
+from datetime import datetime
 
-engine = db.create_engine('sqlite:///tasks-sqlalchemy.db', echo=True)
-Session = sessionmaker(bind=engine)
-connection = engine.connect()
+from sqlalchemy import create_engine
+from sqlalchemy import Integer, Column, ForeignKey, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
-metadata = db.MetaData()
+engine = create_engine('sqlite:///tasks-sqlalchemy.db', echo=True)
 
-users = db.Table('users', metadata,
-                 db.Column('user_id', db.Integer, db.Sequence("user_id_seq"), primary_key=True),
-                 db.Column('chat_id', db.Integer)
-                 )
+Base = declarative_base()
 
-tasks = db.Table('tasks', metadata,
-                 db.Column('task_id', db.Integer, db.Sequence("task_id_seq"), primary_key=True),
-                 db.Column('user_id', db.Integer),  # , foreign_key='users.user_id')
-                 db.Column('name', db.Text),
-                 db.Column('description', db.Text),
-                 db.Column('deadline', db.DateTime)
-                 )
 
-metadata.create_all(engine)
+class User(Base):
+    __tablename__ = 'users'
+
+    user_id = Column(Integer, primary_key=True)
+    chat_id = Column(Integer)
+
+
+class Task(Base):
+    __tablename__ = 'tasks'
+    task_id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'))
+    name = Column(String(50))
+    description = Column(String(300))
+    deadline = Column(Integer)
+    User = relationship('User')
+
+
+Base.metadata.create_all(engine)

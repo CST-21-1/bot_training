@@ -1,33 +1,30 @@
-import sqlalchemy
 import telebot
 from telebot import types
-
 from tgbot import config
-from create_table import db, connection
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from create_table import Base, User, Task
+from sqlalchemy.sql import exists
+
+engine = create_engine('sqlite:///tasks-sqlalchemy.db', echo=True)
+session = sessionmaker(bind=engine)
+s = session()
 
 bot = telebot.TeleBot(config.TOKEN)
-
-user_dict = {}
-
-
-class User:
-    def __init__(self):
-        self.task_dict = []
-
-
-class Task:
-    def __init__(self, number):
-        self.number = number
-        self.name = None
-        self.description = None
-        self.deadline = None
 
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(message.chat.id, 'Привет')
+    # user = User(chat_id=message.chat.id)
+    # s.add(user)
+    # s.commit()
     chat_id = message.chat.id
-    user_dict[chat_id] = User()
+    user = s.query(User.user_id).filter(User.chat_id == chat_id).all()
+    if not user:
+        user = User(chat_id=message.chat.id)
+        s.add(user)
+        s.commit()
 
 
 @bot.message_handler(commands=['button'])
@@ -50,50 +47,40 @@ def action(message):
         msg = bot.reply_to(message, 'Введите название задачи:')
         bot.register_next_step_handler(msg, process_task_name)
     elif message.text == 'Просмотреть задачу':
-        chat_id = message.chat.id
-        user = user_dict[chat_id]
-        task_dict = user.task_dict
-        tasks = ''
-        for task in task_dict:
-            tasks += str(task.number) + '. ' + task.name + '\n' + task.description + '\nСрок: ' + task.deadline + '\n'
-        bot.send_message(message.chat.id, 'Список задач:\n\n' + tasks + '\nВыберите задачу:')
+        user_id = s.query(User.user_id).filter(User.chat_id == message.chat.id).one()
+        # tasks = s.query(Task).filter(Task.user_id == user_id).group_by(Task.task_id)
+        result = ''
+        print('\n\n\nthis\n\n\n')
+        for id, name, description, deadline in s.query(Task.task_id, Task.name, Task.description, Task.deadline).filter(Task.user_id == user_id).one(): #group_by(Task.task_id):
+            result += str(id) + '. ' + name + '\n' + description + '\nСрок: ' + deadline + '\n'
+        bot.send_message(message.chat.id, 'Список задач:\n\n' + result + '\nВыберите задачу:')
 
 
 @bot.message_handler(content_types=['text'])
 def process_task_name(message):
-    chat_id = message.chat.id
-    user = user_dict[chat_id]
-    number = len(user.task_dict)
-    user.task_dict.append(Task(number + 1))
-    task = user.task_dict[number]
     name = message.text
-    task.number = number
-    task.name = name
+    task = Task(name=name)
     msg = bot.reply_to(message, 'Добавим описание задачи:')
-    bot.register_next_step_handler(msg, process_task_description)
+    bot.register_next_step_handler(msg, process_task_description, task)
 
 
 @bot.message_handler(content_types=['text'])
-def process_task_description(message):
-    chat_id = message.chat.id
-    user = user_dict[chat_id]
-    number = len(user.task_dict) - 1
-    task = user.task_dict[number]
+def process_task_description(message, task):
     description = message.text
     task.description = description
     msg = bot.reply_to(message, 'И на последок дедлайн:')
-    bot.register_next_step_handler(msg, process_task_deadline)
+    bot.register_next_step_handler(msg, process_task_deadline, task)
 
 
 @bot.message_handler(content_types=['text'])
-def process_task_deadline(message):
-    chat_id = message.chat.id
-    user = user_dict[chat_id]
-    number = len(user.task_dict) - 1
-    task = user.task_dict[number]
+def process_task_deadline(message, task):
     deadline = message.text
     task.deadline = deadline
+    user_id = s.query(User.user_id).filter(User.chat_id == message.chat.id)
+    task.user_id = user_id
     bot.send_message(message.chat.id, 'Задание успешно добавлено!')
+    s.add(task)
+    s.commit()
 
 
 def run():
